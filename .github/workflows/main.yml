@@ -1,68 +1,37 @@
-name: Build and Deploy Backend with Docker and SonarCloud
+## Stages
+# 1. snyk_scan - Software Composition Analysis (SCA)
+# 2. sonarcloud_scan - Static Application Security Testing (SAST)
+# 3. docker build and push
+# 4. deploy (AWS EC2)
+# 5. zap_scan - Dynamic Application Security Testing (DAST)
+# 6. trivy_scan - Container Security Scan
+
+
+
+name: Build, Test, and Deploy Backend with Docker, AWS, SonarCloud, Snyk and Zap
 
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Image for Backend
+  SCA_snyk_scan:
+    name: Run Snyk SCA Scan for Vulnerabilities
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v2
 
-      # - name: Set up Node.js
-      #   uses: actions/setup-node@v2
-      #   with:
-      #     node-version: '18' # Specify your Node.js version
-
-      # - name: Install dependencies
-      #   run: npm install
-
-      # - name: Install SonarScanner
-      #   run: npm install -g sonar-scanner
-
-      # - name: Run SonarCloud scan
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Store your SonarCloud token in GitHub Secrets
-      #     SONAR_HOST_URL: "https://sonarcloud.io" # SonarCloud URL
-      #   run: |
-      #     sonar-scanner \
-      #       -Dsonar.projectKey=rohitsoni1209_trythat-Backend \
-      #       -Dsonar.organization=rohitsoni1209 \
-      #       -Dsonar.sources=. \
-      #       -Dsonar.host.url=$SONAR_HOST_URL \
-      #       -Dsonar.login=$SONAR_TOKEN \
-      #       -X
-
-      - name: SonarQube
-        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          node-version: '18' # Specify your Node.js version
 
-    
+      - name: Install dependencies
+        run: npm install
 
-      # - name: Run Snyk to check for vulnerabilities
-      #   uses: snyk/actions/node@main
-      #   env:
-      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      #   with:
-      #     command: monitor
-
-
-
-
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/node@master
         env:
@@ -70,10 +39,40 @@ jobs:
         with:
           command: monitor
 
+  SAST_sonarcloud_scan:
+    name: Run SonarCloud SAST Scan
+    needs: SCA_snyk_scan
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
 
-          
- 
+      - name: Install SonarScanner
+        run: npm install -g sonar-scanner
+
+      - name: Run SonarCloud scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Store your SonarCloud token in GitHub Secrets
+          SONAR_HOST_URL: "https://sonarcloud.io" # SonarCloud URL
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=rohitsoni1209_trythat-Backend \
+            -Dsonar.organization=rohitsoni1209 \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.login=$SONAR_TOKEN \
+            -X
+
+  docker_build_and_push:
+    name: Build and Push Docker Image for Backend
+    needs: SAST_sonarcloud_scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
       - name: Build Docker Image for Backend
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/trythat-backend:latest .
 
@@ -87,8 +86,8 @@ jobs:
         run: docker push ${{ secrets.DOCKER_USERNAME }}/trythat-backend:latest
 
   deploy:
-    name: Deploy Backend Application
-    needs: build-and-push
+    name: Deploy Backend Application to EC2
+    needs: docker_build_and_push
     runs-on: ubuntu-latest
 
     steps:
@@ -122,3 +121,22 @@ jobs:
             # Optionally remove unused containers and images
             sudo docker system prune -f
           EOF
+
+  DAST_zap_scan:
+    name: Scan the Web Application with ZAP
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: ZAP Scan
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          token: ${{ secrets.ZAP_PAT }}
+          docker_name: 'ghcr.io/zaproxy/zaproxy:stable'
+          target: 'http://43.204.114.112/' # Replace with your deployed Website URL
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
