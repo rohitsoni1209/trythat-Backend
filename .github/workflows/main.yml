@@ -14,30 +14,50 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
+      # - name: Set up Node.js
+      #   uses: actions/setup-node@v2
+      #   with:
+      #     node-version: '18' # Specify your Node.js version
+
+      # - name: Install dependencies
+      #   run: npm install
+
+      # - name: Install SonarScanner
+      #   run: npm install -g sonar-scanner
+
+      # - name: Run SonarCloud scan
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Store your SonarCloud token in GitHub Secrets
+      #     SONAR_HOST_URL: "https://sonarcloud.io" # SonarCloud URL
+      #   run: |
+      #     sonar-scanner \
+      #       -Dsonar.projectKey=rohitsoni1209_trythat-Backend \
+      #       -Dsonar.organization=rohitsoni1209 \
+      #       -Dsonar.sources=. \
+      #       -Dsonar.host.url=$SONAR_HOST_URL \
+      #       -Dsonar.login=$SONAR_TOKEN \
+      #       -X
+
+
+
+      - name: SonarQube Cloud scan
+        uses: actions/checkout@v4
         with:
-          node-version: '18' # Specify your Node.js version
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install SonarScanner
-        run: npm install -g sonar-scanner
-
-      - name: Run SonarCloud scan
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Store your SonarCloud token in GitHub Secrets
-          SONAR_HOST_URL: "https://sonarcloud.io" # SonarCloud URL
-        run: |
-          sonar-scanner \
-            -Dsonar.projectKey=rohitsoni1209_trythat-Backend \
-            -Dsonar.organization=rohitsoni1209 \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=$SONAR_HOST_URL \
-            -Dsonar.login=$SONAR_TOKEN \
-            -X
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@main
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+          
+ 
       - name: Build Docker Image for Backend
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/trythat-backend:latest .
 
