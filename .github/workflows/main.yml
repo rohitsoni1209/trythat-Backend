@@ -38,9 +38,7 @@ jobs:
       #       -Dsonar.login=$SONAR_TOKEN \
       #       -X
 
-
-
-      - name: SonarQube Cloud scan
+      - name: SonarQube
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
@@ -49,6 +47,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+    
 
       # - name: Run Snyk to check for vulnerabilities
       #   uses: snyk/actions/node@main
