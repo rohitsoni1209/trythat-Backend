@@ -3,7 +3,6 @@ name: Build and Deploy Backend with Docker and SonarCloud
 on:
   push:
     branches:
-      - main
       - master
 
 jobs:
