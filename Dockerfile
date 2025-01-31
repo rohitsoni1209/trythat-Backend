@@ -1,28 +1,26 @@
-FROM node:20-alpine
+# Base image
+FROM node:18
 
-# Set working directory
-WORKDIR /app
+# Create app directory
+WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
 
-# Install dependencies (include devDependencies for build step)
+# Install app dependencies
 RUN npm install
 
-# Install NestJS CLI globally
-RUN npm install -g @nestjs/cli
-
-# Copy the rest of the application
+# Bundle app source
 COPY . .
 
-# Build the application
+# Copy the .env and .env.development files
+COPY .env ./
+
+# Creates a "dist" folder with the production build
 RUN npm run build
 
-# Remove devDependencies after build to reduce image size
-RUN npm prune --omit=dev
+# Expose the port on which the app will run
+EXPOSE 8000
 
-# Expose the application port
-EXPOSE 8081
-
-# Start the application
+# Start the server using the production build
 CMD ["npm", "run", "start:prod"]
