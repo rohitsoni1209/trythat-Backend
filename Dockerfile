@@ -1,26 +1,22 @@
-# Base image
-FROM node:18
+FROM node:20-alpine
 
-# Create app directory
-WORKDIR /usr/src/app
+# Set working directory
+WORKDIR /app
 
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install app dependencies
-RUN npm install
+# Install dependencies
+RUN npm install --omit=dev
 
-# Bundle app source
+# Copy the rest of the application
 COPY . .
 
-# Copy the .env and .env.development files
-#COPY .env ./
-
-# Creates a "dist" folder with the production build
+# Build the application
 RUN npm run build
 
-# Expose the port on which the app will run
-EXPOSE 8000
+# Expose the application port
+EXPOSE 8081
 
-# Start the server using the production build
+# Start the application
 CMD ["npm", "run", "start:prod"]
