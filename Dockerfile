@@ -4,23 +4,23 @@ FROM node:18
 # Create app directory
 WORKDIR /usr/src/app
 
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# Copy package files
 COPY package*.json ./
 
-# Install app dependencies
+# Install dependencies
 RUN npm install
 
-# Bundle app source
+# Copy the entire application source code
 COPY . .
 
 # Copy the .env and .env.development files
-COPY .env ./
+COPY .env .env.development ./
 
-# Creates a "dist" folder with the production build
+# Build production files
 RUN npm run build
 
-# Expose the port on which the app will run
+# Expose the correct port
 EXPOSE 8000
 
-# Start the server using the production build
-CMD ["npm", "run", "start:prod"]
+# Start the server
+CMD ["npm", "run", "start"]
