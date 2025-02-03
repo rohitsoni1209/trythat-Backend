@@ -20,7 +20,7 @@ COPY .env .env.development ./
 RUN npm run build
 
 # Expose the correct port
-EXPOSE 8000
+EXPOSE 80
 
 # Start the server
 CMD ["npm", "run", "start"]
